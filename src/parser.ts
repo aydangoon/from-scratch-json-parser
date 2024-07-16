@@ -1,6 +1,5 @@
 import { GrammarError } from './errors'
 import { Lexer } from './lexer'
-import { Token } from './tokens'
 
 type JFalse = false
 type JTrue = true
@@ -19,10 +18,11 @@ export class Parser {
     }
 
     parse(): JValue {
-        return this.parseValue(true)
+        return this.parseValue({ root: true })
     }
 
-    private parseValue(root: boolean = false): JValue {
+    private parseValue(options: { root: boolean } = { root: false }): JValue {
+        const { root } = options
         const token = this.lexer.nextToken()
         if (!token) {
             throw new GrammarError('unexpected end of input')
@@ -117,7 +117,7 @@ export class Parser {
             arr.push(this.parseValue())
             token = this.lexer.nextToken()
             if (token?.type !== 'end-array' && token?.type !== 'value-separator') {
-                throw new GrammarError('unexpected token, expected value-separator')
+                throw new GrammarError('unexpected token, expected value-separator or end-array')
             }
         }
         return arr
