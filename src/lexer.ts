@@ -155,8 +155,91 @@ export class Lexer {
         throw new TokenParsingError('invalid escape sequence')
     }
 
+    /**
+     * consumes [ minus ] int [ frac ] [ exp ]
+     */
     private consumeNumber(): NumberToken {
-        throw new TokenParsingError()
+        let value = ''
+
+        // optional minus sign
+        if (this.peek() === '-') {
+            value += '-'
+            this.index++
+        }
+
+        // int
+        value += this.consumeInt()
+
+        // optional fraction
+        if (this.peek() === '.') {
+            value += this.consumeFraction()
+        }
+
+        // optional exponent
+        if (this.peek() === 'e' || this.peek() === 'E') {
+            value += this.consumeExponent()
+        }
+
+        return { type: 'number', value: Number(value) }
+    }
+
+    /**
+     * consumes int = zero / ( digit1-9 *DIGIT )
+     */
+    private consumeInt() {
+        let value = ''
+        if (this.peek() === '0') {
+            value += '0'
+            this.index++
+        } else {
+            value += this.consumeDigits()
+        }
+        if (value === '') {
+            throw new TokenParsingError('failed to parse integer, expected digit')
+        }
+        return value
+    }
+
+    /**
+     * consumes frac = decimal-point 1*DIGIT
+     */
+    private consumeFraction() {
+        let value = '.'
+        this.index++
+        value += this.consumeDigits()
+        if (value === '.') {
+            throw new TokenParsingError('failed to parse fraction, expected digit')
+        }
+        return value
+    }
+
+    /**
+     * consumes exp = e [ minus / plus ] 1*DIGIT
+     */
+    private consumeExponent() {
+        let value = 'e'
+        this.index++
+        if (this.peek() === '+' || this.peek() === '-') {
+            value += this.peek()
+            this.index++
+        }
+        value += this.consumeDigits()
+        if (value === 'e' || value === 'e+' || value === 'e-') {
+            throw new TokenParsingError('failed to parse exponent, expected digit')
+        }
+        return value
+    }
+
+    /**
+     * consumes *DIGIT
+     */
+    private consumeDigits(): string {
+        let value = ''
+        while (!this.empty() && isDigit(this.peek()!)) {
+            value += this.peek()
+            this.index++
+        }
+        return value
     }
 }
 

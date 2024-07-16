@@ -114,3 +114,158 @@ describe('lex strings', () => {
         expect(() => lexer.nextToken()).toThrow(TokenParsingError)
     })
 })
+
+describe('lex numbers', () => {
+    it('simple integer', () => {
+        const lexer = new Lexer('42')
+        expect(lexer.nextToken()).toEqual({ type: 'number', value: 42 })
+    })
+
+    it('simple float', () => {
+        const lexer = new Lexer('3.14')
+        expect(lexer.nextToken()).toEqual({ type: 'number', value: 3.14 })
+    })
+
+    it('float below zero', () => {
+        const lexer = new Lexer('0.0102')
+        expect(lexer.nextToken()).toEqual({ type: 'number', value: 0.0102 })
+    })
+
+    it('negative number', () => {
+        const lexer = new Lexer('-42')
+        expect(lexer.nextToken()).toEqual({ type: 'number', value: -42 })
+    })
+
+    it('zero', () => {
+        let lexer = new Lexer('0')
+        expect(lexer.nextToken()).toEqual({ type: 'number', value: 0 })
+
+        lexer = new Lexer('-0')
+        expect(lexer.nextToken()).toEqual({ type: 'number', value: -0 })
+    })
+
+    it('exponential notation', () => {
+        const lexer = new Lexer('6.022e23')
+        expect(lexer.nextToken()).toEqual({ type: 'number', value: 6.022e23 })
+    })
+
+    it('negative exponential notation', () => {
+        const lexer = new Lexer('-6.022e-23')
+        expect(lexer.nextToken()).toEqual({ type: 'number', value: -6.022e-23 })
+    })
+
+    it('treats leading zero as separate token', () => {
+        const lexer = new Lexer('01')
+        expect(lexer.nextToken()).toEqual({ type: 'number', value: 0 })
+        expect(lexer.nextToken()).toEqual({ type: 'number', value: 1 })
+    })
+
+    it('throws error for incomplete fraction', () => {
+        const lexer = new Lexer('3.')
+        expect(() => lexer.nextToken()).toThrow(TokenParsingError)
+    })
+
+    it('throws error for incomplete exponent', () => {
+        let lexer = new Lexer('3e')
+        expect(() => lexer.nextToken()).toThrow(TokenParsingError)
+
+        lexer = new Lexer('2.3e+')
+        expect(() => lexer.nextToken()).toThrow(TokenParsingError)
+    })
+})
+
+describe('lex full json', () => {
+    it('simple object', () => {
+        const input = `
+            {
+                "elden ring": "goated",
+                "num_fish": 123e4
+            }
+        `
+        const lexer = new Lexer(input)
+        const tokens: Token[] = []
+        while (lexer.hasNextToken()) {
+            tokens.push(lexer.nextToken()!)
+        }
+        expect(tokens).toEqual([
+            { type: 'begin-object' },
+            { type: 'string', value: 'elden ring' },
+            { type: 'name-separator' },
+            { type: 'string', value: 'goated' },
+            { type: 'value-separator' },
+            { type: 'string', value: 'num_fish' },
+            { type: 'name-separator' },
+            { type: 'number', value: 123e4 },
+            { type: 'end-object' },
+        ])
+    })
+    it('simple array', () => {
+        const input = `
+            [
+                "hello",
+                -2.02,
+                true
+            ]
+        `
+        const lexer = new Lexer(input)
+        const tokens: Token[] = []
+        while (lexer.hasNextToken()) {
+            tokens.push(lexer.nextToken()!)
+        }
+        expect(tokens).toEqual([
+            { type: 'begin-array' },
+            { type: 'string', value: 'hello' },
+            { type: 'value-separator' },
+            { type: 'number', value: -2.02 },
+            { type: 'value-separator' },
+            { type: 'true' },
+            { type: 'end-array' },
+        ])
+    })
+    it('nested json', () => {
+        const input = `
+            {
+                "nested_obj": {
+                    "key": "value"
+                },
+                "nested_array": [
+                    1,
+                    2,
+                    {
+                        "key": "value"
+                    }
+                ]
+            } 
+        `
+        const lexer = new Lexer(input)
+        const tokens: Token[] = []
+        while (lexer.hasNextToken()) {
+            tokens.push(lexer.nextToken()!)
+        }
+        expect(tokens).toEqual([
+            { type: 'begin-object' },
+            { type: 'string', value: 'nested_obj' },
+            { type: 'name-separator' },
+            { type: 'begin-object' },
+            { type: 'string', value: 'key' },
+            { type: 'name-separator' },
+            { type: 'string', value: 'value' },
+            { type: 'end-object' },
+            { type: 'value-separator' },
+            { type: 'string', value: 'nested_array' },
+            { type: 'name-separator' },
+            { type: 'begin-array' },
+            { type: 'number', value: 1 },
+            { type: 'value-separator' },
+            { type: 'number', value: 2 },
+            { type: 'value-separator' },
+            { type: 'begin-object' },
+            { type: 'string', value: 'key' },
+            { type: 'name-separator' },
+            { type: 'string', value: 'value' },
+            { type: 'end-object' },
+            { type: 'end-array' },
+            { type: 'end-object' },
+        ])
+    })
+})
