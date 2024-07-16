@@ -76,6 +76,16 @@ export class Lexer {
     }
 
     /**
+     * returns the next token without consuming it
+     */
+    peekNextToken(): Token | null {
+        let prevIndex = this.index
+        const token = this.nextToken()
+        this.index = prevIndex
+        return token
+    }
+
+    /**
      * returns true if there are no more characters to consume
      */
     private empty(): boolean {
